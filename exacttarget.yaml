@@ -1,0 +1,197 @@
+swagger: '2.0'
+info:
+  x-ibm-name: exacttarget
+  title: exacttarget
+  version: 1.0.0
+schemes:
+  - https
+host: $(catalog.host)
+basePath: /exacttarget/v1
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  clientIdHeader:
+    type: apiKey
+    in: header
+    name: X-IBM-Client-Id
+security:
+  - clientIdHeader: []
+x-ibm-configuration:
+  testable: true
+  enforced: true
+  cors:
+    enabled: true
+  assembly:
+    execute:
+      - activity-log:
+          title: activity-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+      - switch:
+          title: switch
+          case:
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/accessToken'))"
+              execute:
+                - invoke:
+                    title: AccessToken
+                    timeout: 60
+                    verb: POST
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    target-url: $(auth-exacttarget)/v1/requestToken
+                    tls-profile: 'client:Loopback-client'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/user/register'))"
+              execute:
+                - invoke:
+                    title: RegisterUser
+                    timeout: 60
+                    verb: POST
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    target-url: $(exacttarget-url)/contacts/v1/contacts
+                    tls-profile: 'client:Loopback-client'
+            - condition: "((request.verb==='PATCH')&&(api.operation.path==='/user/update'))"
+              execute:
+                - invoke:
+                    title: UpdateUserInfo
+                    timeout: 60
+                    verb: PATCH
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    target-url: $(exacttarget-url)/contacts/v1/contacts
+                    tls-profile: 'client:Loopback-client'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/email/key/{key}'))"
+              execute:
+                - map:
+                    title: map
+                    inputs:
+                      key:
+                        schema:
+                          type: integer
+                          title: key
+                        variable: request.parameters.key
+                    outputs:
+                      key:
+                        schema:
+                          type: integer
+                          title: key
+                        variable: request.parameters.key
+                    actions:
+                      - set: key
+                        from: key
+                - invoke:
+                    title: SendEmail
+                    timeout: 60
+                    verb: POST
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    tls-profile: 'client:Loopback-client'
+                    target-url: '$(exacttarget-url)/messaging/v1/messageDefinitionSends/key:$(request.parameters.key)/send'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/dataextension/key/{key}'))"
+              execute:
+                - invoke:
+                    title: CreateDataExtension
+                    timeout: 60
+                    verb: POST
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    target-url: '$(exacttarget-url)/hub/v1/dataevents/key:$(exacttarget-dataextensionkey)/rowset'
+                    tls-profile: 'client:Loopback-client'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/user/preferences'))"
+              execute:
+                - invoke:
+                    title: UserPrefernces
+                    timeout: 60
+                    verb: POST
+                    cache-response: protocol
+                    cache-ttl: 900
+                    stop-on-error:
+                      - null
+                    target-url: $(exacttarget-url)/contacts/v1/attributes/search
+      - activity-log:
+          title: activity-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+  phase: realized
+  gateway: datapower-gateway
+  properties:
+    exacttarget-dataextensionkey:
+      value: 21F3A82C-82B0-454F-BDF6-871CC7550B2C
+      description: ''
+      encoded: false
+    auth-exacttarget:
+      value: 'https://auth.exacttargetapis.com'
+      description: ''
+      encoded: false
+    exacttarget-url:
+      value: 'https://www.exacttargetapis.com'
+      description: ''
+      encoded: false
+  catalogs:
+    Production:
+      properties:
+        auth-exacttarget: 'https://auth.exacttargetapis.com'
+        exacttarget-url: 'https://www.exacttargetapis.com'
+        exacttarget-dataextensionkey: 21F3A82C-82B0-454F-BDF6-871CC7550B2C
+    dev:
+      properties:
+        auth-exacttarget: 'https://auth.exacttargetapis.com'
+        exacttarget-url: 'https://www.exacttargetapis.com'
+        exacttarget-dataextensionkey: E794F1C0-28B1-418F-AA9E-31D2EC382D1A
+paths:
+  /user/preferences:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+  '/dataextension/key/{key}':
+    post:
+      responses:
+        '200':
+          description: 200 OK
+      parameters:
+        - name: key
+          type: string
+          required: true
+          in: path
+  '/email/key/{key}':
+    post:
+      responses:
+        '200':
+          description: 200 OK
+      parameters:
+        - name: key
+          type: integer
+          required: true
+          in: path
+          format: int32
+  /user/update:
+    patch:
+      responses:
+        '200':
+          description: 200 OK
+  /accessToken:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+  /user/register:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+tags: []

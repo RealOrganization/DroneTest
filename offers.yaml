@@ -1,0 +1,720 @@
+swagger: '2.0'
+info:
+  x-ibm-name: offers
+  title: Offers
+  version: 1.0.0
+schemes:
+  - https
+host: $(catalog.host)
+basePath: /mc/offers
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  clientSecretHeader:
+    type: apiKey
+    description: ''
+    in: header
+    name: X-IBM-Client-Secret
+  clientIdHeader:
+    type: apiKey
+    in: header
+    name: X-IBM-Client-Id
+security:
+  - clientSecretHeader: []
+    clientIdHeader: []
+x-ibm-configuration:
+  testable: true
+  enforced: true
+  cors:
+    enabled: true
+  assembly:
+    execute:
+      - activity-log:
+          title: Request-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+      - xslt:
+          title: ConvertToUpperCase
+          input: false
+          version: 1.0.0
+          source: "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:apim=\"http://www.ibm.com/apimanagement\" extension-element-prefixes=\"apim\" exclude-result-prefixes=\"apim\">\r\n\t<xsl:import href=\"local://isp/policy/apim.setvariable.xsl\"/>\r\n\t<xsl:import href=\"local:/isp/policy/apim.custom.xsl\"/>  \r\n      <xsl:template match=\"/\">\t\t  \r\n     <xsl:variable name=\"upperstr\" select=\"translate(apim:getVariable('request.headers.partnerkey'),'abcdefghijklmnopqrstuvwxyz','ABCDEFGHIJKLMNOPQRSTUVWXYZ')\"/>\r\n\t <xsl:call-template name=\"apim:setVariable\">\r\n\_\_\_\_\_\_<xsl:with-param name=\"varName\" select=\"'partnerkey'\" />\r\n\_\_\_\_\_\_<xsl:with-param name=\"value\" select=\"$upperstr\" />\r\n\_\_\_\_</xsl:call-template>\r\n      </xsl:template>\r\n\t  </xsl:stylesheet>"
+      - switch:
+          title: switch
+          case:
+            - condition: '$(partnerkey) == "HANNAFORD_WEB"'
+              execute:
+                - set-variable:
+                    title: 'Web: set-variable'
+                    actions:
+                      - clear: message.headers.partnerkey
+                      - set: a
+                        value: $(webAppCode)
+                    version: 1.0.0
+            - condition: '$(partnerkey) == "HANNAFORD_ORCHESTRATION"'
+              execute:
+                - set-variable:
+                    title: 'Orchestration: set-variable'
+                    actions:
+                      - clear: message.headers.partnerkey
+                      - set: a
+                        value: $(orchestrationAppCode)
+                    version: 1.0.0
+            - condition: '$(partnerkey) == "HANNAFORD_MOBILE"'
+              execute:
+                - set-variable:
+                    title: 'Mobile: set-variable'
+                    actions:
+                      - clear: message.headers.partnerkey
+                      - set: a
+                        value: $(mobileAppCode)
+                    version: 1.0.0
+            - otherwise:
+                - throw:
+                    title: 'throw : Invalid PartnerKey'
+                    version: 1.0.0
+                    name: Invalid PartnerKey
+                    message: 'APIC Error : Invalid Partner Key Supplied.'
+          version: 1.0.0
+      - switch:
+          title: switch
+          case:
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/targeted'))"
+              execute:
+                - proxy:
+                    title: 'Targeted Offers : Proxy'
+                    timeout: 60
+                    verb: keep
+                    cache-response: protocol
+                    cache-ttl: 900
+                    version: 1.0.0
+                    target-url: 'https://hannaford-apir.pdn.coupons.com/service/offers/targeted?t=$(request.parameters.t)&a=$(a)&n=$(request.parameters.n)&i=$(request.parameters.i)&sb=$(request.parameters.sb)&so=$(request.parameters.so)'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/recommended'))"
+              execute:
+                - proxy:
+                    title: 'Recommended Offers : Proxy'
+                    timeout: 60
+                    verb: keep
+                    cache-response: protocol
+                    cache-ttl: 900
+                    version: 1.0.0
+                    target-url: 'https://hannaford-apir.pdn.coupons.com/service/offers/recommended?t=$(request.parameters.t)&a=$(a)&n=$(request.parameters.n)&i=$(request.parameters.i)&sb=$(request.parameters.sb)&so=$(request.parameters.so)'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/activate'))"
+              execute:
+                - proxy:
+                    title: 'Activate Offers : Proxy'
+                    timeout: 60
+                    verb: keep
+                    cache-response: protocol
+                    cache-ttl: 900
+                    version: 1.0.0
+                    target-url: 'https://hannaford-apir.pdn.coupons.com/service/offers/activate?t=$(request.parameters.t)&a=$(a)'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/all'))"
+              execute:
+                - proxy:
+                    title: 'Get All Offers : Proxy'
+                    timeout: 60
+                    verb: keep
+                    cache-response: protocol
+                    cache-ttl: 900
+                    version: 1.0.0
+                    target-url: 'https://hannaford-apir.pdn.coupons.com/service/offers/all?a=$(a)&n=$(request.parameters.n)&i=$(request.parameters.i)'
+            - condition: "((request.verb==='POST')&&(api.operation.path==='/search'))"
+              execute:
+                - proxy:
+                    title: 'Search Offers : Proxy'
+                    timeout: 60
+                    verb: keep
+                    cache-response: protocol
+                    cache-ttl: 900
+                    version: 1.0.0
+                    target-url: 'https://hannaford-apir.pdn.coupons.com/service/offers/search?t=$(request.parameters.t)&a=$(a)&q=$(request.parameters.q)&n=$(request.parameters.n)&i=$(request.parameters.i)'
+          version: 1.0.0
+      - activity-log:
+          title: Response-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+    catch: []
+  phase: realized
+  properties:
+    partnerSecret:
+      value: aa75400e-db6d-4b6f-a624-15cc8ef6cc6a
+      description: ''
+      encoded: false
+    partnerKey:
+      value: aa215c2f-ba42-4ffc-8235-05a9a4252f90
+      description: ''
+      encoded: false
+    mobileAppCode:
+      value: bb10f6bc-3622-4af7-898c-04a13a41267d
+      description: ''
+      encoded: false
+    orchestrationAppCode:
+      value: 4f98e07b-aef8-4007-bf46-29563c740891
+      description: ''
+      encoded: false
+    webAppCode:
+      value: dbf65aef-5bf8-45e5-a741-b8a7e7fd84f2
+      description: ''
+      encoded: false
+  catalogs:
+    Development:
+      properties:
+        mobileAppCode: bb10f6bc-3622-4af7-898c-04a13a41267d
+        orchestrationAppCode: 4f98e07b-aef8-4007-bf46-29563c740891
+        webAppCode: dbf65aef-5bf8-45e5-a741-b8a7e7fd84f2
+        partnerSecret: aa75400e-db6d-4b6f-a624-15cc8ef6cc6a
+        partnerKey: aa215c2f-ba42-4ffc-8235-05a9a4252f90
+    Quality Assurance:
+      properties:
+        mobileAppCode: ''
+        orchestrationAppCode: ''
+        webAppCode: ''
+        partnerSecret: ''
+        partnerKey: ''
+    Performance:
+      properties:
+        mobileAppCode: ''
+        orchestrationAppCode: ''
+        webAppCode: ''
+        partnerSecret: ''
+        partnerKey: ''
+    Production:
+      properties:
+        mobileAppCode: ''
+        orchestrationAppCode: ''
+        webAppCode: ''
+        partnerSecret: ''
+        partnerKey: ''
+    Build:
+      properties:
+        mobileAppCode: bb10f6bc-3622-4af7-898c-04a13a41267d
+        orchestrationAppCode: 4f98e07b-aef8-4007-bf46-29563c740891
+        webAppCode: dbf65aef-5bf8-45e5-a741-b8a7e7fd84f2
+        partnerSecret: aa75400e-db6d-4b6f-a624-15cc8ef6cc6a
+        partnerKey: aa215c2f-ba42-4ffc-8235-05a9a4252f90
+paths:
+  /search:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+      parameters:
+        - name: t
+          type: string
+          required: true
+          in: query
+          description: 'Access Token:The oAuth authenticated user access token'
+        - name: q
+          type: string
+          required: true
+          in: query
+          description: 'Search query:The search query.'
+        - name: 'n'
+          type: string
+          required: false
+          in: query
+          description: 'Page Size : The default page size is 20 records.'
+        - name: i
+          type: string
+          required: false
+          in: query
+          description: 'Page Index: The default value is 0.'
+        - name: RequestData
+          required: false
+          in: body
+          schema:
+            $ref: '#/definitions/Request'
+        - name: oauth_signature
+          type: string
+          required: true
+          in: header
+        - name: oauth_nonce
+          type: string
+          required: true
+          in: header
+        - name: oauth_signature_method
+          type: string
+          required: true
+          in: header
+        - name: oauth_consumer_key
+          type: string
+          required: true
+          in: header
+        - name: oauth_timestamp
+          type: string
+          required: true
+          in: header
+        - name: partnerkey
+          type: string
+          required: true
+          in: header
+  /activate:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+      parameters:
+        - name: t
+          type: string
+          required: true
+          in: query
+          description: Access Token
+        - name: RequestData
+          required: false
+          in: body
+          schema:
+            $ref: '#/definitions/ActivateRequest'
+        - name: oauth_signature
+          type: string
+          required: true
+          in: header
+        - name: oauth_nonce
+          type: string
+          required: true
+          in: header
+        - name: oauth_signature_method
+          type: string
+          required: true
+          in: header
+        - name: oauth_consumer_key
+          type: string
+          required: true
+          in: header
+        - name: oauth_timestamp
+          type: string
+          required: true
+          in: header
+        - name: partnerkey
+          type: string
+          required: true
+          in: header
+  /recommended:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+          schema:
+            $ref: '#/definitions/Response'
+      parameters:
+        - name: t
+          type: string
+          required: true
+          in: query
+          description: Access Token
+        - name: 'n'
+          type: string
+          required: false
+          in: query
+          description: Num of Records
+        - name: i
+          type: string
+          required: false
+          in: query
+          description: Page Index
+        - name: sb
+          type: string
+          required: false
+          in: query
+          description: Sort By
+        - name: so
+          type: string
+          required: false
+          in: query
+          description: Sort Order
+        - name: RequestData
+          required: false
+          in: body
+          schema:
+            $ref: '#/definitions/Request'
+        - name: oauth_signature
+          type: string
+          required: true
+          in: header
+        - name: oauth_nonce
+          type: string
+          required: true
+          in: header
+        - name: oauth_signature_method
+          type: string
+          required: true
+          in: header
+        - name: oauth_consumer_key
+          type: string
+          required: true
+          in: header
+        - name: oauth_timestamp
+          type: string
+          required: true
+          in: header
+        - name: partnerkey
+          type: string
+          required: true
+          in: header
+  /targeted:
+    post:
+      responses:
+        '200':
+          description: 200 OK
+          schema:
+            $ref: '#/definitions/Response'
+      parameters:
+        - name: t
+          type: string
+          required: true
+          in: query
+          description: oAuth authenticated user access token
+        - name: 'n'
+          type: string
+          required: false
+          in: query
+          description: The number of records per page
+        - name: i
+          type: integer
+          required: false
+          in: query
+          description: The start index of the page.
+          format: int64
+        - name: sb
+          type: string
+          required: false
+          in: query
+          description: The sort by field (OT (offer type)/OV (offer value))
+        - name: so
+          type: string
+          required: false
+          in: query
+          description: The sort order.
+        - name: Request Data
+          required: true
+          in: body
+          schema:
+            $ref: '#/definitions/Request'
+        - name: oauth_signature
+          type: string
+          required: true
+          in: header
+        - name: oauth_nonce
+          type: string
+          required: true
+          in: header
+        - name: oauth_signature_method
+          type: string
+          required: true
+          in: header
+        - name: oauth_consumer_key
+          type: string
+          required: true
+          in: header
+        - name: oauth_timestamp
+          type: string
+          required: true
+          in: header
+        - name: partnerkey
+          type: string
+          required: true
+          in: header
+definitions:
+  Products:
+    properties:
+      Id:
+        type: string
+      upc:
+        type: string
+      upc12:
+        type: string
+      ean:
+        type: string
+      gtin:
+        type: string
+    additionalProperties: false
+  ActivateRequest:
+    properties:
+      offers:
+        type: array
+        items:
+          type: string
+      activationDate:
+        type: string
+        format: date-time
+      contextAttributes:
+        $ref: '#/definitions/Filters'
+    additionalProperties: false
+    required:
+      - offers
+  Response:
+    description: ''
+    type: object
+    properties:
+      products:
+        type: array
+        items:
+          $ref: '#/definitions/Products'
+      paginationInfo:
+        type: object
+        $ref: '#/definitions/PaginationInfo'
+      offer:
+        type: array
+        items:
+          $ref: '#/definitions/Offer'
+  Hierarchy:
+    properties:
+      categoryLevel1:
+        type: string
+      categoryLevel2:
+        type: string
+      categoryLevel3:
+        type: string
+      categoryLevel4:
+        type: string
+      categoryLevel5:
+        type: string
+    additionalProperties: false
+  ClearingHouse:
+    properties:
+      name:
+        type: string
+        description: The name of the clearing house.
+      id:
+        type: string
+        description: The ID of the clearing house.
+    additionalProperties: false
+  OfferRewards:
+    properties:
+      offerValue:
+        type: string
+        description: The value of the offer.
+      categoryName:
+        type: string
+        description: The name of the category.
+      rewardQuantity:
+        type: string
+        description: The quantity of the reward.
+    additionalProperties: false
+  OfferImage:
+    properties:
+      offerImage1:
+        type: string
+      offerImage2:
+        type: string
+    additionalProperties: false
+  OfferItems:
+    properties:
+      familyCode:
+        type: string
+        description: The family code of items to which the offer is restricted
+      upc:
+        type: string
+        description: The array of product UPCs under offerItems
+      upc12:
+        type: array
+        items:
+          type: string
+        description: 'The array of product UPCs, in 12 digits, to which the offer is restricted.'
+      ean:
+        type: array
+        items:
+          type: string
+        description: The array of product EANs to which the offer is restricted.
+      gtin:
+        type: array
+        items:
+          type: string
+        description: The array of GTINs to which the offer is restricted.
+    additionalProperties: false
+  OfferConditions:
+    properties:
+      offerType:
+        type: string
+        description: The type of the offer
+      redemptionFrequency:
+        type: integer
+        description: The frequency at which the offer can be redeemed.
+      redemptionLimit:
+        type: integer
+        description: The maximum number of times that the offer can be redeemed
+      minBasketValue:
+        type: number
+        description: The minimum basket value required for the offer to be eligible for redemption.
+        format: double
+      minTripCount:
+        type: integer
+        description: The minimum trip count required for the offer to be eligibile for redemption.
+      shopXtimes:
+        type: integer
+        description: The number of times that a shopper must shop to redeem the offer.
+      minQty:
+        type: integer
+        description: The minimum quantity of the product that must be purchased by the shopper to redeem the offer
+      minQtyDescription:
+        type: string
+        description: Additional information describing the minimum quantity
+    additionalProperties: false
+  Offer:
+    properties:
+      offerId:
+        type: string
+        description: Coupons-defined value that uniquely identifies the offer.
+      offerUPC:
+        type: string
+        description: The Universal Product Code of the coupon.
+      offerGS1:
+        type: string
+        description: The GS1 barcode of the offer.
+      offerCode:
+        type: string
+        description: The value defined by the Partner that uniquely identifies the offer.
+      offerActiveDate:
+        type: string
+        description: The date on which the offer goes live
+      offerExpiryDate:
+        type: string
+        description: The expiry date of the offer.
+      offerShutoffDate:
+        type: string
+        description: The date on which the campaign ends.
+      offerDescription:
+        type: string
+        description: The description of the offer
+      brandName:
+        type: string
+        description: The brand name of the offer.
+      companyName:
+        type: string
+        description: The name of the company making the offer.
+      manufacturerCode:
+        type: string
+        description: The manufacturer code of the offer.
+      manufacturerId:
+        type: string
+        description: The manufacturer ID of the offer
+      offerSummary:
+        type: string
+        description: The summary of the offer.
+      offerFinePrint:
+        type: string
+        description: The qualifications and restrictions on the offer.
+      offerDisclaimer:
+        type: string
+        description: The scope of the offer.
+      offerFeaturedText:
+        type: string
+        description: The featured text of the offer
+      hierarchy:
+        description: The hierarchy applicable to the offer.
+        $ref: '#/definitions/Hierarchy'
+      offerImage:
+        type: array
+        description: The list of images available for the offer.
+        items:
+          $ref: '#/definitions/OfferImage'
+      offerConditions:
+        $ref: '#/definitions/OfferConditions'
+      offerItems:
+        $ref: '#/definitions/OfferItems'
+      offerRewards:
+        $ref: '#/definitions/OfferRewards'
+      clearinghouse:
+        items:
+          $ref: '#/definitions/ClearingHouse'
+        type: array
+      offerSource:
+        type: string
+        description: The source of the offer.
+      offerAssociationCode:
+        type: string
+        description: Code for targeted offers indicating user offer association
+      offerRedemptionStartDate:
+        type: string
+        description: The date and time from which the offer can be redeemed
+      offerUpdateDate:
+        type: string
+        description: The date and time when the offer was last modified
+      discountType:
+        type: string
+        description: The level at which the discount isapplicable.
+      purchaseUnit:
+        type: string
+        description: The unit of purchase
+      rewardUnit:
+        type: string
+        description: The unit of reward
+    additionalProperties: false
+  PaginationInfo:
+    properties:
+      startRecord:
+        type: integer
+      expectedRecordsPerPage:
+        type: integer
+      totalRecordsPerPage:
+        type: integer
+      totalRecords:
+        type: integer
+    additionalProperties: false
+  Targeted Offers:
+    properties:
+      offer:
+        type: array
+        items:
+          $ref: '#/definitions/Offer'
+      paginationInfo:
+        type: object
+    additionalProperties: false
+  Context Attributes:
+    properties:
+      channel:
+        type: string
+        description: The channel on which the web service call is made.
+      timeZone:
+        type: string
+        description: The time zone from where the request is made.
+      transactionId:
+        type: string
+        description: The transaction ID associated with the web service call
+      productUPC:
+        type: array
+        description: The list of UPCs.
+        items:
+          type: string
+      zipcode:
+        type: string
+        description: The zip code from where the web service call is made.
+      location:
+        type: string
+        description: The latitude and longitude coordinates of the user.
+      deviceId:
+        type: string
+        description: The unique identifier for the device
+      pageContext:
+        type: string
+        description: The page context identifier for retrieving appropriate offers
+    additionalProperties: false
+  Filters:
+    type: object
+    properties:
+      filterType:
+        type: string
+      filterValues:
+        type: array
+        items:
+          type: string
+    required:
+      - filterType
+      - filterValues
+  Request:
+    properties:
+      facetType:
+        type: array
+        items:
+          type: string
+      contextAttributes:
+        $ref: '#/definitions/Context Attributes'
+      filters:
+        items:
+          $ref: '#/definitions/Filters'
+        type: array
+    additionalProperties: false
+tags: []

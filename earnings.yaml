@@ -1,0 +1,106 @@
+swagger: '2.0'
+info:
+  x-ibm-name: earnings
+  title: earnings
+  version: 1.0.0
+  description: The API for hannaford customers to get the rewards savings/earnings history
+schemes:
+  - https
+host: $(catalog.host)
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  clientSecret:
+    type: apiKey
+    description: ''
+    in: header
+    name: X-IBM-Client-Secret
+  clientID:
+    type: apiKey
+    in: header
+    name: X-IBM-Client-Id
+security:
+  - clientID: []
+    clientSecret: []
+x-ibm-configuration:
+  testable: true
+  enforced: true
+  cors:
+    enabled: true
+  assembly:
+    execute:
+      - activity-log:
+          title: Request-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+      - invoke:
+          target-url: $(cloudant-url)/$(request.parameters.loyaltyCardNo)
+          title: custEarnings
+          password: $(cloudant-password)
+          username: $(cloudant-username)
+          timeout: 60
+          verb: GET
+          cache-response: protocol
+          cache-ttl: 900
+      - activity-log:
+          title: Response-log
+          content: payload
+          error-content: payload
+          version: 1.0.0
+  phase: realized
+  properties:
+    cloudant-url:
+      value: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+      description: URL to connect with cloudant DB
+      encoded: false
+    cloudant-password:
+      value: 4d783e9ccc152da015e28cd613771201c3d91d60
+      description: password to connect cloudant DB
+      encoded: false
+    cloudant-username:
+      value: hintementiochendselylite
+      description: username to connect with cloudant DB
+      encoded: false
+  catalogs:
+    Build:
+      properties:
+        cloudant-username: hintementiochendselylite
+        cloudant-password: 4d783e9ccc152da015e28cd613771201c3d91d60
+        cloudant-url: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+    Development:
+      properties:
+        cloudant-url: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+        cloudant-password: 4d783e9ccc152da015e28cd613771201c3d91d60
+        cloudant-username: hintementiochendselylite
+    Quality Assurance:
+      properties:
+        cloudant-url: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+        cloudant-password: 4d783e9ccc152da015e28cd613771201c3d91d60
+        cloudant-username: hintementiochendselylite
+    Performance:
+      properties:
+        cloudant-url: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+        cloudant-password: 4d783e9ccc152da015e28cd613771201c3d91d60
+        cloudant-username: hintementiochendselylite
+    Production:
+      properties:
+        cloudant-url: 'https://2thcntry.cloudant.com/dvdb_hannaford_savings'
+        cloudant-password: 4d783e9ccc152da015e28cd613771201c3d91d60
+        cloudant-username: hintementiochendselylite
+paths:
+  /loyaltyCardNo:
+    get:
+      responses:
+        '200':
+          description: 200 OK
+      parameters:
+        - name: loyaltyCardNo
+          type: string
+          required: true
+          in: query
+definitions: {}
+tags: []
+basePath: /customer/earnings
